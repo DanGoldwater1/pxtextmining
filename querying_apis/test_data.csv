@@ -1,0 +1,4 @@
+comment_id,comment_text,question_type
+1,This is the first comment. Nurse was great.,what_good
+2,This is the second comment. The ward was freezing.,could_improve
+3,,nonspecific
