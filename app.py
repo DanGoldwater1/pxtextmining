@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas 
-from querying_apis import querying_apis
+# from querying_apis import querying_apis
 import tempfile
 import os
 import requests
