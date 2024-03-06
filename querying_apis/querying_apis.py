@@ -11,7 +11,18 @@ load_dotenv()
 import pandas
 
 
-def format_df(df: pandas.DataFrame):
+def format_df_fast(df: pandas.DataFrame):
+
+    required_cols = ['comment_id', 'comment_text', 'question_type']
+    assert all([col in set(df.columns) for col in required_cols]), "Your iput csv doesn't have the right columns"
+    filtered_df = df[['comment_id', 'comment_text', 'question_type']]
+    filtered_df = filtered_df.replace({pandas.np.nan: ""})
+    # filtered_df = filtered_df.replace({"": "egg"})
+    filtered_df = filtered_df.replace({None: ""})
+    formatted_data = filtered_df.to_dict(orient='records')
+    return formatted_data
+
+def format_df_slow(df: pandas.DataFrame):
 
     required_cols = ['comment_id', 'comment_text', 'question_type']
     assert all([col in set(df.columns) for col in required_cols]), "Your iput csv doesn't have the right columns"

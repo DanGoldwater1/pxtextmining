@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas 
-# from querying_apis import querying_apis
+from querying_apis import querying_apis
 import tempfile
 import os
 import requests
@@ -33,9 +33,12 @@ def get_labels_from_response(results_url):
 
     return final_labels
 st.title('Labelling Data Via API')
-st.write("Use this to generate labels and sentiment for your input data. This is a very simple wrapper around the APIs described [here](https://the-strategy-unit.github.io/pxtextmining/reference/API/slow_API/#). Expect this to take at least 3 minutes to run. Try to combine your data into fewer, larger files, rather than putting many files through this. ")
+st.write("Use this to generate labels and sentiment for your input data. This is a very simple wrapper around the APIs described [here](https://the-strategy-unit.github.io/pxtextmining/reference/API/slow_API/#). If using the slow API, expect this to take at least 3 minutes to run (even for a very small dataset). Try to combine your data into fewer, larger files, rather than putting many files through this. ")
 
+
+api_choice = st.radio("Which API are we querying?", ["Fast", "Slow"])
 url = st.text_input("API URL")
+st.write("You can leave the API key blank if using the Fast API. ")
 api_key = st.text_input("API Key")
 input_df = st.file_uploader("Choose a CSV file", type="csv")
 st.write("Probably set this target to 'multilabel and sentiment'. ")
@@ -44,33 +47,40 @@ target_key = st.selectbox("Target", target_dict.keys())
 if input_df is not None:
     input_df = pandas.read_csv(input_df)
     st.dataframe(input_df.head())  
-    text_data = querying_apis.format_df(df=input_df)
-    st.write("Preview of uploaded CSV:")
+    if api_choice == "Slow":
+        text_data = querying_apis.format_df_slow(df=input_df)
+    if api_choice == "Fast":
+        text_data = querying_apis.format_df_fast(df=input_df)
+
 
     if st.button('Send to API'):
-        params_dict = {'code': api_key, 'target': target_dict[target_key]}
-        response = requests.post(url, params= params_dict, json = text_data)
-        print(response.status_code)
-        if response.status_code == 202:
-            results_url = response.text
-            st.write("Initial query made successfully. Now for the API to do labelling")
-        else:
-            st.write(f"Got a bad response from the post. Status code {response.status_code}")
-
-        time_so_far = 0
-        time_message = st.empty()
-        while True:
-            results_response = requests.get(results_url)
-            if results_response.status_code == 200:
-                labelled_data = results_response.json()
-                break
+        if api_choice  == "Slow":
+            params_dict = {'code': api_key, 'target': target_dict[target_key]}
+            response = requests.post(url, params= params_dict, json = text_data)
+            if response.status_code == 202:
+                results_url = response.text
+                st.write("Initial query made successfully. Now for the API to do labelling")
             else:
-                time_message.write(f'Not ready! Time so far is {time_so_far} seconds. Trying again in 20 seconds...')
-                time_so_far += 20
-                time.sleep(20)
+                st.write(f"Got a bad response from the post. Status code {response.status_code}")
 
-        time_message.write("All done!")
+            time_so_far = 0
+            time_message = st.empty()
+            while True:
+                results_response = requests.get(results_url)
+                if results_response.status_code == 200:
+                    labelled_data = results_response.json()
+                    break
+                else:
+                    time_message.write(f'Not ready! Time so far is {time_so_far} seconds. Trying again in 20 seconds...')
+                    time_so_far += 20
+                    time.sleep(20)
+
+            time_message.write("All done!")
             
+        elif api_choice == "Fast":
+            response = requests.post(f"{url}/predict_multilabel",
+                          json = text_data)
+            labelled_data = response.json()
 
         st.write("Final Data from API:")
         st.write(labelled_data)
